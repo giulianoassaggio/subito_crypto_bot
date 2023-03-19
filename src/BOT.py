@@ -17,7 +17,7 @@ TOKEN_DEL_BOT = "Nascosto su github"
 
 async def gestione_messaggi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat.id     # chat di provenienza dell'annuncio (si suppone sia il mercatino)
-    if chat == CHAT_ID_GRUPPO:
+    if chat == CHAT_ID_GRUPPO or chat == CHAT_ID_FEEDBACK or chat == CHAT_ID_VETRINA:
         mex = update.effective_message  # messaggio con l'annuncio
         user = mex.from_user.name       # autore dell'annuncio
 
