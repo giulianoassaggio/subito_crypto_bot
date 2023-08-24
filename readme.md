@@ -19,4 +19,5 @@ Bot per la gestione della chat, dal funzionamento molto semplice, in attesa del 
 ### TODOs
 
 1. Quando un annuncio contiene più immagini raggruppate, il bot gestisce solo la prima (o comunque quella che ha la didascalia), ignorando le altre. ciò significa che se un utente fa un annuncio con tre foto + testo, la prima viene inviata nel canale, le altre due si ritrovano orfane e senza didascalia nel gruppo, e vanno aggiunte manualmente in risposta al messaggio in canale. Non sono stato in grado di usare correttamente il metodo send_media_group(), se qualcuno è in grado apra PR (con commenti), grazie
-2. per altro, issues o pr o brainstorming su telegram.
+2. Utile sarebbe che l'autore dell'annuncio potesse rispondere allo stesso con "#trovato" o "#venduto" e che l'annuncio si eliminasse da solo di conseguenza
+3. per altro, issues o pull request o gruppo brainstorming su telegram.
