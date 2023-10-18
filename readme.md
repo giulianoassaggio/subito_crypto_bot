@@ -18,6 +18,14 @@ Bot per la gestione della chat, dal funzionamento molto semplice, in attesa del 
 
 ### TODOs
 
-1. Quando un annuncio contiene più immagini raggruppate, il bot gestisce solo la prima (o comunque quella che ha la didascalia), ignorando le altre. ciò significa che se un utente fa un annuncio con tre foto + testo, la prima viene inviata nel canale, le altre due si ritrovano orfane e senza didascalia nel gruppo, e vanno aggiunte manualmente in risposta al messaggio in canale. Non sono stato in grado di usare correttamente il metodo send_media_group(), se qualcuno è in grado apra PR (con commenti), grazie
-2. Utile sarebbe che l'autore dell'annuncio potesse rispondere allo stesso con "#trovato" o "#venduto" e che l'annuncio si eliminasse da solo di conseguenza
-3. per altro, issues o pull request o gruppo brainstorming su telegram.
+ - [ ] Quando un annuncio contiene più immagini raggruppate, il bot gestisce solo la prima (o comunque quella che ha la didascalia), ignorando le altre. ciò significa che se un utente fa un annuncio con tre foto + testo, la prima viene inviata nel canale, le altre due si ritrovano orfane e senza didascalia nel gruppo, e vanno aggiunte manualmente in risposta al messaggio in canale. Non sono stato in grado di usare correttamente il metodo send_media_group(), se qualcuno è in grado apra PR (con commenti), grazie
+ - [x] Utile sarebbe che l'autore dell'annuncio potesse rispondere allo stesso con "#trovato" o "#venduto" e che l'annuncio si eliminasse da solo di conseguenza.
+       Funzionalità in parte implementata
+ - [ ] Per altro, issues o pull request o gruppo brainstorming su telegram.
+
+---
+
+### DATABASE
+
+Non potendo recuperare messaggi vecchi a partire dall'ID, è necessario un database che contenga quantomeno l'ID del messaggio, l'autore, il testo e la data di pubblicazione.
+Questo per esempio è utile nel punto 2 dei TODOs: recuperando l'autore, ognuno può eliminarsi i suoi annunci, ora invece è comunque un admin che deve farlo
