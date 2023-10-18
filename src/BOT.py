@@ -53,6 +53,24 @@ async def gestione_messaggi(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(CHAT_ID_FEEDBACK, feedback_message)
             await mex.delete()
 
+        elif ("#trovato" in mex.text.lower() or "#venduto" in mex.text.lower()):
+                chat_admins = await update.effective_chat.get_administrators() # recupero la lista di admin della chat
+                if update.effective_user in (admin.user for admin in chat_admins):
+                    # Solo un admin può inviare il messaggio. Non c'è modo infatti di recuperare a posteriori 
+                    # l'autore dell'annuncio -> ha senso che solo l'autore possa eliminare i suoi annunci
+                    # per ovviare al problema, la funzione viene limitata agli admin, che si suppone non abbiano
+                    # interesse a far danni
+                    original_message_id = mex.reply_to_message.forward_from_message_id
+                    try:
+                        await context.bot.delete_message(chat_id = CHAT_ID_VETRINA, message_id = original_message_id)
+                        # Un esempio di Eccezione è un messaggio postato più di 48h fa, che non può essere eliminato  dal bot
+                    except Exception:
+                        await context.bot.send_message(CHAT_ID_GRUPPO, "Message can't be deleted, please do it manually")
+                    #await mex.delete() non serve, perché un mex eliminato in vetrina elimina anche tutte le risposte,questa compresa
+                else:
+                    await context.bot.send_message(CHAT_ID_GRUPPO, "Questo tag possono usarlo solo gli admin (per ora almeno)", reply_to_message_id=mex.id)
+
+
     elif chat == CHAT_ID_NOLEGGI:
         if user != "Telegram" and "#feedback" in mex.text.lower():
             #esattamente come i feedback sopra, solo provenienti dalla chat noleggi
