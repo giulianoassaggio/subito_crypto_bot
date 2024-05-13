@@ -8,6 +8,15 @@ Bot per la gestione della chat, dal funzionamento molto semplice, in attesa del 
 
 ---
 
+### src e funzionamento
+Il bot è il file `/src/BOT.py`, `Deamonize.c`serve per creare un altro processo slegato dalla shell di partenza e far girare il bot in background. I/O (comprese le eccezioni non gestite) vengono dirottati a /dev/null.
+```shell
+pip install python-telegram-bot
+gcc ./Deamonize.c -o deamonize
+./deamonize python3 python-telegram-bot
+```
+in questo modo, dal momento che il bot gira su un raspberry a cui mi collego con ssh, il bot rimane attivo alla chiusura della connessione.
+
 ### Problemi Noti
 
 1. Il bot ovviamento non fa controllo sul messaggio, ma guarda solo gli hashtag, c'è bisogno quindi di moderazione manuale sul contenuto.
