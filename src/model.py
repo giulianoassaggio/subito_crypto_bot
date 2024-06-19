@@ -3,6 +3,7 @@ from sqlalchemy                 import create_engine, Column
 from sqlalchemy.orm     import sessionmaker
 from sqlalchemy                 import (Integer, String, Date, DateTime, Float, Boolean, Text)
 import random
+import re
 def create_table(engine):
     Base.metadata.create_all(engine)
 
@@ -160,3 +161,60 @@ class Feedback(Base):
         return feedback
 
 
+class Gruppo(Base):
+    __tablename__ = "gruppo"
+    id = Column(Integer, primary_key=True)
+    nome = Column('nome', String(128))
+    chat_id = Column('chat_id', Integer, unique=True)
+
+    def addGruppo(self, nome, chat_id):
+        session = Database().Session()
+        gruppo = Gruppo(nome=nome, chat_id=chat_id)
+        session.add(gruppo)
+        session.commit()
+        session.close()
+
+    def getGruppoByChatId(self, chat_id):
+        session = Database().Session()
+        gruppo = session.query(Gruppo).filter_by(chat_id=chat_id).first()
+        session.close()
+        return gruppo
+
+class Tag(Base):
+    __tablename__ = "tag"
+    id = Column(Integer, primary_key=True)
+    hashtag = Column('hashtag', String(64))
+    messaggio = Column('messaggio', Text)
+    id_utente = Column('id_utente', Integer)
+
+    def addTag(self, hashtag, messaggio, id_utente):
+        session = Database().Session()
+        tag = Tag(hashtag=hashtag, messaggio=messaggio, id_utente=id_utente)
+        session.add(tag)
+        session.commit()
+        session.close()
+
+    def getTagsByMessage(self, messaggio):
+        session = Database().Session()
+        tags = session.query(Tag).filter_by(messaggio=messaggio).all()
+        session.close()
+        return tags
+
+    def getTagsByHashtag(self, hashtag):
+        session = Database().Session()
+        tags = session.query(Tag).filter_by(hashtag=hashtag).all()
+        session.close()
+        return tags
+
+    def getTagsByMessage(self, messaggio):
+        
+        # Extract hashtags using regular expression
+        hashtag_regex = r"#(\w+)"
+        hashtags = re.findall(hashtag_regex, messaggio)
+
+        # Create a list of Tag objects
+        tags = []
+        for hashtag in hashtags:
+            tags.append(hashtag)
+
+        return tags

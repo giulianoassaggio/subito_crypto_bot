@@ -3,40 +3,41 @@
 import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler
-from model import Utente,Feedback
+from model import Utente,Feedback,Gruppo,Tag
 from config import *
 
+"""
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+"""
+
+app_config = TestConfig()
+#app_config = ProdConfig()
 
 
-#app_config = TestConfig()
-app_config = ProdConfig()
-
-CHAT_ID_GRUPPO       = app_config.get_chat_id_gruppo
-CHAT_ID_VETRINA      = app_config.get_chat_id_vetrina
-CHAT_ID_FEEDBACK     = app_config.get_chat_id_feedback
-CHAT_ID_NOLEGGI      = app_config.get_chat_id_noleggi
-CHAT_ID_ASTE         = app_config.get_chat_id_aste
-CHAT_ID_NOLEGGI      = app_config.get_chat_id_noleggi
-
-TOKEN_DEL_BOT = ""
+TOKEN_DEL_BOT = "7063743485:AAGu5FoKImJ1e1oeAVikhs7KHAYHb0qEWSU"
 
 async def gestione_messaggi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat.id     # chat di provenienza dell'annuncio (si suppone sia il mercatino)
-    
     mex = update.effective_message  # messaggio con l'annuncio
     user = mex.from_user.name       # autore dell'annuncio
 
     Utente().checkUtente(mex)
     Utente().getUtente(mex)
+    if Gruppo().getGruppoByChatId(chat):
+        # Extract hashtags from the message
+        messaggio = mex.text
+        print(mex)
+        hashtags = Tag().getTagsByMessage(messaggio)
+        print(hashtags)
+        # Add tags for each hashtag
+        for hashtag in hashtags:
+            Tag().addTag(hashtag, messaggio, mex.from_user.id)
 
-    print(user)
-    if chat == CHAT_ID_GRUPPO or chat == CHAT_ID_FEEDBACK or chat == CHAT_ID_VETRINA:
-        # in tutte le seguenti casistiche, nel messaggio da inviare si piò aggiungere il metodo .split(" ", 1)[1], 
-        # che serve a eliminare le parole #vendo etc, ma ho pensato di toglierlo perché è bene distinguere vendo da cerco
+
+
         if mex.photo and (("#vendo" in str(mex.caption).lower()) or ("#cerco" in str(mex.caption).lower()) or ("#servizio" in str(mex.caption).lower())):
                 # annunci contenenti un immagine: solo la prima viene inviata.
                 # questi annunci vanno inviati in vetrina, poi eliminati gli originali

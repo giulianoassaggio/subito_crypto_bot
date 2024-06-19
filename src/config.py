@@ -38,7 +38,7 @@ class ProdConfig(ConfigStrategy):
 
 class TestConfig(ConfigStrategy):
     def get_chat_id_gruppo(self):
-        return -1002072480121
+        return -1001721979634
 
     def get_chat_id_vetrina(self):
         return -1001996668260
