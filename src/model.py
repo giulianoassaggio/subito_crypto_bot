@@ -234,6 +234,18 @@ class Skin(Base):
   fileid = Column(Text, unique=True, nullable=False)  # Telegram file ID
   price = Column(Integer, nullable=False)
 
+  @staticmethod
+  def get_all_skins():
+    session =  Database().Session()
+    try:
+        skins = session.query(Skin).all()
+        return skins
+    except Exception as e:
+        print(f"Error fetching skins: {e}")
+        return []
+    finally:
+        session.close()
+
   def add_skin(self,name: str, fileid: str, price: int):
     """
     Adds a new skin to the database.
@@ -272,3 +284,14 @@ class UserSkin(Base):
   skin_id = Column(Integer, ForeignKey('skin.id'), nullable=False)
   is_selected = Column(Boolean, default=False, nullable=False)
   purchased_at = Column(DateTime, default=datetime.datetime.now, nullable=False)
+
+  def has_skin(self, user_id, skin_id):
+    session = Database().Session()
+    try:
+        query = session.query(UserSkin).filter_by(user_id=user_id, skin_id=skin_id).first()
+        return query is not None
+    except Exception as e:
+        print(f"Error checking skin ownership: {e}")
+        return False
+    finally:
+        session.close()

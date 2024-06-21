@@ -1,14 +1,17 @@
-#pip install python-telegram-bot
-
 import logging
-from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler,CommandHandler
-from model import Utente,Feedback,Gruppo,Tag,Skin
-from config import *
-from lndhub import Wallet
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters, CommandHandler, CallbackQueryHandler
+from model import Utente, Skin, UserSkin
+from config import TOKEN_DEL_BOT
 
-# Stato globale per tracciare se un utente admin è in fase di aggiunta di una skin
-pending_skins = {}
+# Configurazione del logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
+# Stato globale per tracciare le skin visualizzate dagli utenti
+user_skins = {}
 
 async def gestione_messaggi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle all incoming messages."""
@@ -20,55 +23,78 @@ async def gestione_messaggi(update: Update, context: ContextTypes.DEFAULT_TYPE):
         Utente().checkUtente(mex)
         user = Utente().getUtente(userid)
 
-        if Gruppo().getGruppoByChatId(chat):  # Se il gruppo è presente nel db e quindi ammesso
-            Tag().addTagsByMessage(mex.text, userid)
+        if mex.text == '/skins':
+            skins = Skin().get_all_skins()  # Metodo da implementare per ottenere tutte le skins disponibili
+            if skins:
+                for skin in skins:
+                    keyboard = []
+                    if Utente().isAdmin(user):
+                        keyboard.append([InlineKeyboardButton("Elimina", callback_data=f"delete_{skin.id}")])
 
-        if Utente().isAdmin(user):
-            if mex.text=='/addskin':
-                pending_skins[userid] = {'state': 'awaiting_photo'}
-                await context.bot.send_message(chat_id=userid, text="Per favore, invia la foto della skin.")
-                return
+                    if UserSkin().has_skin(userid, skin.id):
+                        keyboard.append([InlineKeyboardButton("Usa", callback_data=f"use_{skin.id}")])
+                    else:
+                        keyboard.append([InlineKeyboardButton("Compra", callback_data=f"buy_{skin.id}")])
 
-            if userid in pending_skins:
-                if pending_skins[userid]['state'] == 'awaiting_photo' and mex.photo:
-                    pending_skins[userid]['photo'] = mex.photo[-1].file_id
-                    pending_skins[userid]['state'] = 'awaiting_description'
-                    await context.bot.send_message(chat_id=userid, text="Ora, invia una descrizione per la skin.")
-                
-                if pending_skins[userid]['state'] == 'awaiting_description' and mex.text:
-                    pending_skins[userid]['description'] = mex.text
-                    pending_skins[userid]['state'] = 'awaiting_price'
-                    await context.bot.send_message(chat_id=userid, text="Ora, invia il prezzo per la skin.")
-                    return
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    await context.bot.send_photo(chat_id=userid, photo=skin.fileid, caption=f"{skin.name}\nPrezzo: {skin.price} coins", reply_markup=reply_markup)
 
-                if pending_skins[userid]['state'] == 'awaiting_price' and mex.text:
-                    try:
-                        price = int(mex.text)
-                        description = pending_skins[userid]['description']
-                        file_id = pending_skins[userid]['photo']
+                user_skins[userid] = skins
+            else:
+                await context.bot.send_message(chat_id=userid, text="Nessuna skin disponibile al momento.")
 
-                        Skin().add_skin(name=description, fileid=file_id, price=price)
-                        await context.bot.send_message(chat_id=userid, text="Skin aggiunta con successo!")
-                    except ValueError:
-                        await context.bot.send_message(chat_id=userid, text="Per favore, invia un prezzo valido (numero intero).")
-                    except Exception as e:
-                        logging.error(f"Errore durante l'aggiunta della skin: {e}")
-                        await context.bot.send_message(chat_id=userid, text="Si è verificato un errore durante l'aggiunta della skin.")
-                    finally:
-                        del pending_skins[userid]
-                    return
-                
-        
-        if mex.text == '/me':
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=Utente().infoUser(user),parse_mode='markdown')
-        
+        elif mex.text == '/me':
+            user_skin = UserSkin().get_selected_skin(userid)
+            if user_skin:
+                await context.bot.send_message(chat_id=userid, text=f"Stai usando la skin: {user_skin.name}")
+            else:
+                await context.bot.send_message(chat_id=userid, text="Non hai selezionato nessuna skin.")
 
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Si è verificato un errore.")
 
+async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle all callback queries from inline keyboard."""
+    try:
+        query = update.callback_query
+        user_id = query.from_user.id
+        query_data = query.data.split('_')
+        action = query_data[0]
+        skin_id = int(query_data[1])
+
+        if action == 'buy':
+            skin = Skin().get_skin_by_id(skin_id)  # Metodo da implementare per ottenere la skin dall'ID
+            if skin:
+                # Simulazione di un sistema di monete o punti per l'utente
+                coins = Utente().get_coins(user_id)  # Metodo da implementare per ottenere le monete dell'utente
+                if coins >= skin.price:
+                    UserSkin().add_user_skin(user_id, skin_id)
+                    await query.answer("Skin acquistata con successo!")
+                else:
+                    await query.answer("Non hai abbastanza coins per acquistare questa skin.")
+            else:
+                await query.answer("Skin non trovata.")
+
+        elif action == 'use':
+            UserSkin().select_user_skin(user_id, skin_id)
+            await query.answer("Skin impostata come attuale.")
+
+        elif action == 'delete':
+            if Utente().isAdmin(user):
+                Skin().delete_skin(skin_id)  # Metodo da implementare per eliminare una skin
+                await query.answer("Skin eliminata con successo!")
+            else:
+                await query.answer("Non sei autorizzato a eliminare skin.")
+
+    except Exception as e:
+        logging.error(f"An error occurred in callback handler: {e}")
+        await query.answer("Si è verificato un errore.")
+
 if __name__ == '__main__':
     application = ApplicationBuilder().token(TOKEN_DEL_BOT).build()
-    function_handler = MessageHandler(None, callback=gestione_messaggi)
+    function_handler = MessageHandler(filters.ALL, gestione_messaggi)
+    callback_query_handler = CallbackQueryHandler(callback_handler)
     application.add_handler(function_handler)
+    application.add_handler(callback_query_handler)
     application.run_polling()
