@@ -3,10 +3,12 @@
 import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler,CommandHandler
-from model import Utente,Feedback,Gruppo,Tag
+from model import Utente,Feedback,Gruppo,Tag,Skin
 from config import *
 from lndhub import Wallet
 
+# Stato globale per tracciare se un utente admin è in fase di aggiunta di una skin
+pending_skins = {}
 
 async def gestione_messaggi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle all incoming messages."""
@@ -21,8 +23,45 @@ async def gestione_messaggi(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if Gruppo().getGruppoByChatId(chat):  # Se il gruppo è presente nel db e quindi ammesso
             Tag().addTagsByMessage(mex.text, userid)
 
+        if Utente().isAdmin(user):
+            if mex.text=='/addskin':
+                pending_skins[userid] = {'state': 'awaiting_photo'}
+                await context.bot.send_message(chat_id=userid, text="Per favore, invia la foto della skin.")
+                return
+
+            if userid in pending_skins:
+                if pending_skins[userid]['state'] == 'awaiting_photo' and mex.photo:
+                    pending_skins[userid]['photo'] = mex.photo[-1].file_id
+                    pending_skins[userid]['state'] = 'awaiting_description'
+                    await context.bot.send_message(chat_id=userid, text="Ora, invia una descrizione per la skin.")
+                
+                if pending_skins[userid]['state'] == 'awaiting_description' and mex.text:
+                    pending_skins[userid]['description'] = mex.text
+                    pending_skins[userid]['state'] = 'awaiting_price'
+                    await context.bot.send_message(chat_id=userid, text="Ora, invia il prezzo per la skin.")
+                    return
+
+                if pending_skins[userid]['state'] == 'awaiting_price' and mex.text:
+                    try:
+                        price = int(mex.text)
+                        description = pending_skins[userid]['description']
+                        file_id = pending_skins[userid]['photo']
+
+                        Skin().add_skin(name=description, fileid=file_id, price=price)
+                        await context.bot.send_message(chat_id=userid, text="Skin aggiunta con successo!")
+                    except ValueError:
+                        await context.bot.send_message(chat_id=userid, text="Per favore, invia un prezzo valido (numero intero).")
+                    except Exception as e:
+                        logging.error(f"Errore durante l'aggiunta della skin: {e}")
+                        await context.bot.send_message(chat_id=userid, text="Si è verificato un errore durante l'aggiunta della skin.")
+                    finally:
+                        del pending_skins[userid]
+                    return
+                
+        
         if mex.text == '/me':
             await context.bot.send_message(chat_id=update.effective_chat.id, text=Utente().infoUser(user),parse_mode='markdown')
+        
 
     except Exception as e:
         logging.error(f"An error occurred: {e}")
