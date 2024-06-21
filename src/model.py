@@ -5,11 +5,12 @@ import datetime
 from sqlalchemy                 import Integer, String, Date, DateTime, Float, Boolean, Text,ForeignKey
 import random
 import re
+from config import db_name
+
 def create_table(engine):
     Base.metadata.create_all(engine)
 
 Base = declarative_base()
-db_name = 'subito_crypto.db'
 engine = create_engine(f'sqlite:///{db_name}')
 create_table(engine)
 session = sessionmaker(bind=engine)()
