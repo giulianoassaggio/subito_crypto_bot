@@ -1,7 +1,8 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy                 import create_engine, Column
-from sqlalchemy.orm     import sessionmaker
-from sqlalchemy                 import (Integer, String, Date, DateTime, Float, Boolean, Text)
+from sqlalchemy.orm     import sessionmaker, relationship  # Import relationship here
+import datetime
+from sqlalchemy                 import Integer, String, Date, DateTime, Float, Boolean, Text,ForeignKey
 import random
 import re
 def create_table(engine):
@@ -33,7 +34,8 @@ class Utente(Base):
     trustscore = Column('trustscore', Integer)
     livello = Column('livello', Integer)
     admin = Column('admin',Integer)
-    
+    skins = relationship("UserSkin", backref='utente')  # one-to-many relationship
+
     
     def CreateUser(self,id_telegram,username,name,last_name):
         session = Database().Session()
@@ -92,7 +94,7 @@ class Utente(Base):
             name = message.chat.first_name
             last_name = message.chat.last_name
         user = self.CreateUser(id_telegram=chatid,username=username,name=name,last_name=last_name)
-        self.addRandomExp(user,message)
+        self.addRandomExp(user)
 
     def isAdmin(self,utente):
         session = Database().Session()
@@ -114,7 +116,7 @@ class Utente(Base):
 
         return answer
 
-    def addRandomExp(self,user,message):
+    def addRandomExp(self,user):
         exp = random.randint(1,5)
         self.addExp(user,exp)
         
@@ -215,6 +217,58 @@ class Tag(Base):
         # Create a list of Tag objects
         tags = []
         for hashtag in hashtags:
-            tags.append(hashtag)
+            tags.append(Tag(hashtag=hashtag, messaggio=messaggio))
 
         return tags
+
+    def addTagsByMessage(self, messaggio,userid):
+        tags = self.getTagsByMessage(messaggio)
+        for tag in tags:
+            self.addTag(tag,messaggio,userid)
+            
+
+class Skin(Base):
+  __tablename__ = "skin"
+  id = Column(Integer, primary_key=True)
+  name = Column(String)
+  fileid = Column(Text, unique=True, nullable=False)  # Telegram file ID
+  price = Column(Integer, nullable=False)
+
+  def add_skin(self,name: str, fileid: str, price: int):
+    """
+    Adds a new skin to the database.
+
+    Args:
+        db (sqlalchemy.orm.Session): SQLAlchemy session object.
+        name (str): Optional name for the skin.
+        fileid (str): Telegram file ID of the skin image.
+        price (int): Price of the skin in some currency unit.
+    """
+    db = Database().Session()
+    new_skin = Skin(name=name, fileid=fileid, price=price)
+    db.add(new_skin)
+    db.commit()
+    db.refresh(new_skin)  # Refresh to get the generated ID
+    return new_skin
+
+  def remove_skin(self, skin_id: int):
+    """
+    Removes a skin from the database by ID.
+
+    Args:
+        db (sqlalchemy.orm.Session): SQLAlchemy session object.
+        skin_id (int): ID of the skin to remove.
+    """
+    db = Database().Session()
+    skin_to_delete = db.query(Skin).get(skin_id)
+    if skin_to_delete:
+      db.delete(skin_to_delete)
+      db.commit()
+
+class UserSkin(Base):
+  __tablename__ = "user_skin"
+  id = Column(Integer, primary_key=True)
+  user_id = Column(Integer, ForeignKey('utente.id'), nullable=False)
+  skin_id = Column(Integer, ForeignKey('skin.id'), nullable=False)
+  is_selected = Column(Boolean, default=False, nullable=False)
+  purchased_at = Column(DateTime, default=datetime.datetime.now, nullable=False)
